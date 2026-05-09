@@ -9,9 +9,11 @@
 #include "AefPharus.h"
 #include "Kismet/GameplayStatics.h"
 
-// DisplayCluster component support detection
-// Same pattern as AefPharusClusterActor.cpp for consistency
-#if __has_include("Components/DisplayClusterSceneComponentSyncThis.h")
+// DisplayCluster component support is gated by Build.cs (Win64/Linux only).
+// __has_include is unreliable here: UBT mounts nDisplay's public include path
+// even on platforms where the plugin is disabled, so the .generated.h is
+// missing at compile time despite the header being "found".
+#if AEFPHARUS_WITH_DISPLAYCLUSTER
 	#include "Components/DisplayClusterSceneComponentSyncThis.h"
 	#define AefPharus_HAS_DISPLAYCLUSTER_COMPONENTS 1
 #else

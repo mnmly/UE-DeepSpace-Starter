@@ -7,8 +7,9 @@
 #include "AefPharusClusterActor.h"
 #include "AefPharus.h"
 
-// Check if DisplayCluster components are available
-#if __has_include("Components/DisplayClusterSceneComponentSyncThis.h")
+// DisplayCluster component support is gated by Build.cs (Win64/Linux only).
+// See AefPharusRootOriginActor.cpp for rationale on not using __has_include.
+#if AEFPHARUS_WITH_DISPLAYCLUSTER
 	#include "Components/DisplayClusterSceneComponentSyncThis.h"
 	#define AefPharus_HAS_DISPLAYCLUSTER_COMPONENTS 1
 #else

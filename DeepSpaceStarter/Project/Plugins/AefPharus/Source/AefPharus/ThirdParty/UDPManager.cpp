@@ -7,10 +7,35 @@
 #include "UDPManager.h"
 #include "../Public/AefPharus.h"
 #if PLATFORM_WINDOWS // EPIC UBER METHOD
-	#include "Windows/AllowWindowsPlatformTypes.h" 
+	#include "Windows/AllowWindowsPlatformTypes.h"
 	#include <Ws2tcpip.h>		// TCP/IP annex needed for multicasting
-	#include "Windows/HideWindowsPlatformTypes.h" 
+	#include "Windows/HideWindowsPlatformTypes.h"
 	typedef int socklen_t; // ID NOTE: OTTO STUFF for WIN32
+#else
+	// POSIX shim: maps Win32 winsock entry points used below onto BSD sockets.
+	// Pharus tracking will function on Mac/Linux through these mappings, though
+	// the original code path is only battle-tested on Windows.
+	#include <ctype.h>
+	#include <string.h>
+	#include <sys/ioctl.h>
+	#include <fcntl.h>
+	struct WSADATA_stub { int unused; };
+	typedef WSADATA_stub WSADATA;
+	#ifndef MAKEWORD
+		#define MAKEWORD(a, b) ((WORD)(((uint8_t)(a)) | (((uint16_t)((uint8_t)(b))) << 8)))
+	#endif
+	static inline int WSAStartup(WORD, WSADATA*) { return 0; }
+	static inline int WSACleanup() { return 0; }
+	static inline int WSAGetLastError() { return errno; }
+	static inline int closesocket(SOCKET s) { return ::close(s); }
+	static inline int ioctlsocket(SOCKET s, long cmd, unsigned long* arg) { return ::ioctl(s, cmd, arg); }
+	#define strcpy_s(dst, sz, src) ((void)strncpy((dst), (src), (sz)))
+	// The existing strcpy_s call sites in this file pass sizeof(inet_ntoa(...)),
+	// i.e. sizeof(char*), as the destination size. That's a latent bug in the
+	// upstream code which MSVC tolerates but clang flags as -Werror under
+	// -Wsizeof-pointer-memaccess. Suppress here rather than rewriting the
+	// caller logic, which would expand the scope of this Mac-support patch.
+	#pragma clang diagnostic ignored "-Wsizeof-pointer-memaccess"
 #endif
 
 //--------------------------------------------------------------------------------

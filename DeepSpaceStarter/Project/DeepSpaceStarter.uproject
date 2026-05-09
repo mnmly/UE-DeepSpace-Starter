@@ -22,6 +22,8 @@
 		"Windows",
 		"WindowsEditor",
 		"Linux",
-		"LinuxEditor"
+		"LinuxEditor",
+		"Mac",
+		"MacEditor"
 	]
 }

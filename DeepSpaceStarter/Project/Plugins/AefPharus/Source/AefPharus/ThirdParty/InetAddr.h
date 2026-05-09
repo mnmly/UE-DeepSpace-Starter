@@ -10,6 +10,28 @@
 	#include "Windows/AllowWindowsPlatformTypes.h"
 	#include <winsock2.h>
 	#include "Windows/HideWindowsPlatformTypes.h"
+#else
+	// POSIX socket compatibility shim for non-Windows platforms (Mac, Linux).
+	// Maps Win32 socket types/macros onto BSD socket equivalents so the rest
+	// of this header and UDPManager can stay unchanged.
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
+	#include <netdb.h>
+	#include <unistd.h>
+	#include <errno.h>
+	#include <cstdint>
+	typedef int             SOCKET;
+	typedef uint16_t        USHORT;
+	typedef uint32_t        ULONG;
+	typedef uint16_t        WORD;
+	#ifndef INVALID_SOCKET
+		#define INVALID_SOCKET (-1)
+	#endif
+	#ifndef SOCKET_ERROR
+		#define SOCKET_ERROR   (-1)
+	#endif
 #endif
 
 #include <string.h>

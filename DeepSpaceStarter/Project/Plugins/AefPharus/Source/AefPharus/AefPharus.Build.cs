@@ -34,10 +34,20 @@ public class AefPharus : ModuleRules
 				"Sockets",           // For UDP networking (UDPManager)
 				"Networking",        // For network utilities (InetAddr)
 				"InputCore",         // For EKeys (keyboard input in test actor)
-				"Projects",          // For config path helpers
-				"DisplayCluster"     // For nDisplay cluster API
+				"Projects"           // For config path helpers
 			}
 		);
+
+		// nDisplay is only supported on Win64/Linux. On other platforms (Mac), the
+		// plugin compiles without DisplayCluster integration; cluster sync becomes a
+		// no-op and DisplayCluster-based components fall back to USceneComponent.
+		bool bWithDisplayCluster = Target.Platform == UnrealTargetPlatform.Win64
+			|| Target.Platform == UnrealTargetPlatform.Linux;
+		if (bWithDisplayCluster)
+		{
+			PublicDependencyModuleNames.Add("DisplayCluster");
+		}
+		PublicDefinitions.Add("AEFPHARUS_WITH_DISPLAYCLUSTER=" + (bWithDisplayCluster ? "1" : "0"));
 
 		// Private dependencies
 		PrivateDependencyModuleNames.AddRange(
