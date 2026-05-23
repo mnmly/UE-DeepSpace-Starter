@@ -95,9 +95,26 @@ Do **not** try to patch the engine's Switchboard plugin in place — same reason
      `Extras/ThirdPartyNotUE/SwitchboardThirdParty/Python/` venv (matches Win/Linux).
    - ✅ GUI launches on Mac, OSC server up on `127.0.0.1:6000`, plugins discovered,
      config dialog round-trips correctly.
-   - ⏳ **End-to-end node test deferred** — needs a Win or Linux machine running
-     `SwitchboardListener` to point the GUI at. When such a node exists:
-     `Add Device ▾ → nDisplay → IP + listener port (default 2980) → Connect → Start Unreal`.
+   - ✅ **End-to-end connection verified** against a Win listener over Tailscale
+     (2026-05-23). Node `100.120.177.122:2980` → Mac Switchboard QUIC handshake
+     succeeded, TLS auth token saved, nDisplay Monitor populated with the Win
+     node's driver/host info. "Start Unreal" not yet exercised — that requires
+     the project to be present on the Win node at a path Switchboard knows about,
+     which is its own setup task (rsync push, copy, or shared volume).
+
+   - ⚠️ **Gotcha discovered: SwitchboardListener 3.3 uses QUIC, not TCP.** Logged
+     output says `Defaulting to: -port=2980` and `Started listening` but
+     `Get-NetTCPConnection -LocalPort 2980` returns nothing — listener binds UDP.
+     A TCP-only Windows Firewall rule is insufficient; you need a UDP rule:
+     ```powershell
+     New-NetFirewallRule -DisplayName "SwitchboardListener UDP" -Direction Inbound `
+       -Protocol UDP -LocalPort 2980 -Action Allow -Profile Any
+     ```
+     The QUIC dependency also explains why `aioquic` is in
+     `Extras/ThirdPartyNotUE/SwitchboardThirdParty/requirements.txt`. `nc -z` and
+     similar TCP probes from Mac will always show "Operation timed out" against a
+     running listener — they're probing the wrong protocol. Use Switchboard's own
+     Connect action to verify.
 4. **Scope 2 path:** depends on `tasks/macos-ndisplay-port.md` completing (Strategy A or B). Then start a separate plan for the listener port — it's a multi-day task and deserves its own `tasks/macos-switchboard-listener-port.md`.
 
 ## Useful commands
