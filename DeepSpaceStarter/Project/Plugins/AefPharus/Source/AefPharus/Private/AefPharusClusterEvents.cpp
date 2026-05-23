@@ -34,28 +34,19 @@ bool UAefPharusClusterEvents::IsClusterPrimary()
 	return GetClusterRole() == EAefPharusClusterRole::Primary;
 }
 
-void UAefPharusClusterEvents::BroadcastTransformEvent(const FString& EventName,
-                                                      const FTransform& Transform,
-                                                      bool bPrimaryOnly)
+void UAefPharusClusterEvents::EmitClusterEventJson(const FAefPharusClusterEventJson& Event,
+                                                   bool bPrimaryOnly)
 {
 #if AEFPHARUS_WITH_DISPLAYCLUSTER
-	if (UDisplayClusterBlueprintLib::GetClusterRole() != EDisplayClusterNodeRole::Primary)
-	{
-		UE_LOG(LogAefPharus, Verbose,
-			TEXT("BroadcastTransformEvent('%s') skipped: this node is not Primary"),
-			*EventName);
-		return;
-	}
-
-	FDisplayClusterClusterEventJson Event;
-	Event.Name = EventName;
-	Event.Parameters.Add(TEXT("Location"), Transform.GetLocation().ToString());
-	Event.Parameters.Add(TEXT("Rotation"), Transform.GetRotation().Rotator().ToString());
-	Event.Parameters.Add(TEXT("Scale"),    Transform.GetScale3D().ToString());
-	UDisplayClusterBlueprintLib::EmitClusterEventJson(Event, bPrimaryOnly);
+	FDisplayClusterClusterEventJson Real;
+	Real.Name       = Event.Name;
+	Real.Type       = Event.Type;
+	Real.Category   = Event.Category;
+	Real.Parameters = Event.Parameters;
+	UDisplayClusterBlueprintLib::EmitClusterEventJson(Real, bPrimaryOnly);
 #else
 	UE_LOG(LogAefPharus, Verbose,
-		TEXT("BroadcastTransformEvent('%s') no-op: nDisplay unavailable on this platform"),
-		*EventName);
+		TEXT("EmitClusterEventJson('%s') no-op: nDisplay unavailable on this platform"),
+		*Event.Name);
 #endif
 }

@@ -2,6 +2,6 @@
 	"BuildId": "47537391",
 	"Modules": 
 	{
-		"AefPharus": "UnrealEditor-AefPharus.dll"
+		"AefPharus": "UnrealEditor-AefPharus.dylib"
 	}
 }

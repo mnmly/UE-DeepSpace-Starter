@@ -3,16 +3,18 @@
 
    AefPharus - Cluster Events Shim
 
-   Cross-platform Blueprint API that mirrors a small subset of
-   UDisplayClusterBlueprintLib so blueprints can call cluster operations
-   without taking a hard dependency on the nDisplay module. On Win64 and
-   Linux it forwards to the real DisplayCluster implementation; on Mac
-   (or any platform where nDisplay is unavailable) it returns safe
-   defaults and the calls become no-ops.
+   Cross-platform mirror of the small subset of nDisplay's DisplayCluster
+   surface that BP_DeepSpace_Library uses. Names and field layouts match
+   the originals on purpose so the project's blueprint can be redirected
+   here via `bpx ref rewrite` and load on every platform — including Mac
+   where nDisplay is unavailable.
 
-   Equivalent of the project's BP_DeepSpace_Library function
-   "DeepSpace Cluster Spawn", re-expressed in C++ so the same graph can
-   compile on every supported target.
+   On Win64/Linux: EmitClusterEventJson converts our stub struct into a
+   real FDisplayClusterClusterEventJson and forwards to the actual
+   UDisplayClusterBlueprintLib so live cluster behavior is preserved.
+
+   On Mac: EmitClusterEventJson logs at Verbose and returns; GetClusterRole
+   returns None. No cluster behavior, but the BP compiles and runs.
   ========================================================================*/
 
 #pragma once
@@ -21,7 +23,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "AefPharusClusterEvents.generated.h"
 
-/** Mirror of EDisplayClusterNodeRole so blueprints don't import nDisplay types. */
+/** Mirror of EDisplayClusterNodeRole. Same value ordering. */
 UENUM(BlueprintType)
 enum class EAefPharusClusterRole : uint8
 {
@@ -29,6 +31,39 @@ enum class EAefPharusClusterRole : uint8
 	Primary   UMETA(DisplayName = "Primary"),
 	Secondary UMETA(DisplayName = "Secondary"),
 	Backup    UMETA(DisplayName = "Backup"),
+};
+
+/** Mirror of FDisplayClusterClusterEventBase. Intentionally empty. */
+USTRUCT(BlueprintType)
+struct AEFPHARUS_API FAefPharusClusterEventBase
+{
+	GENERATED_BODY()
+};
+
+/**
+ * Mirror of FDisplayClusterClusterEventJson with the same BP-facing fields.
+ * Used as the payload type for cross-platform cluster event emission.
+ */
+USTRUCT(BlueprintType)
+struct AEFPHARUS_API FAefPharusClusterEventJson : public FAefPharusClusterEventBase
+{
+	GENERATED_BODY()
+
+	/** Event name (used for discarding outdated events). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NDisplay")
+	FString Name;
+
+	/** Event type (used for discarding outdated events). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NDisplay")
+	FString Type;
+
+	/** Event category (used for discarding outdated events). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NDisplay")
+	FString Category;
+
+	/** Event parameters. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NDisplay")
+	TMap<FString, FString> Parameters;
 };
 
 UCLASS()
@@ -50,20 +85,14 @@ public:
 	static bool IsClusterPrimary();
 
 	/**
-	 * Broadcast a named transform event across the cluster as
-	 * DisplayClusterClusterEventJson with Parameters keys
-	 * "Location" / "Rotation" / "Scale".
+	 * Emit a JSON cluster event. Drop-in mirror of
+	 * UDisplayClusterBlueprintLib::EmitClusterEventJson; the function and
+	 * struct names match so BPs can be redirected via bpx ref rewrite.
 	 *
-	 * Only runs on the Primary node (matches the original BP behavior of
-	 * gating on GetClusterRole). On non-Primary nodes, on standalone, or
-	 * on platforms without nDisplay, this is a no-op (logged at Verbose).
-	 *
-	 * @param EventName    Event name written into the JSON payload.
-	 * @param Transform    Transform whose components are stringified into Parameters.
-	 * @param bPrimaryOnly Forwarded to EmitClusterEventJson.
+	 * Win64/Linux: forwards to the real implementation.
+	 * Mac: logs at Verbose and returns.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "AEF|Cluster")
-	static void BroadcastTransformEvent(const FString& EventName,
-	                                    const FTransform& Transform,
-	                                    bool bPrimaryOnly = false);
+	static void EmitClusterEventJson(const FAefPharusClusterEventJson& Event,
+	                                 bool bPrimaryOnly);
 };
