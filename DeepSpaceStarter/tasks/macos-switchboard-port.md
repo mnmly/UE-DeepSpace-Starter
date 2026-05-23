@@ -85,19 +85,32 @@ Do **not** try to patch the engine's Switchboard plugin in place — same reason
 
 1. **Read this file + `tasks/macos-ndisplay-port.md` fully.**
 2. **Confirm scope with the user.** Scope 1 vs Scope 2. Don't start coding until they pick.
-3. **Scope 1 path:**
-   - Read `Source/Switchboard/sb_setup.py` to understand the venv bootstrap.
-   - Write `Project/Scripts/RunSwitchboard.command` mirroring `switchboard.sh` with `Python3/Mac/`.
-   - First run: let it create the venv. If `sb_setup.py` fails, fall back to manual `pip install -r requirements.txt` against `Python3/Mac/bin/python3 -m venv …`.
-   - Launch the GUI, connect to a known Win/Linux node, verify "Connect" / "Start Unreal" round-trips work.
-   - Document the launch flow in `tasks/todo.md` and the project README if there is one.
+3. **Scope 1 path (status: launcher landed, end-to-end node test deferred):**
+   - ✅ `Project/Scripts/RunSwitchboard.command` exists (commit `91e2451`). Mirrors
+     `switchboard.sh`; resolves `UE_ROOT` via env var or the Epic launcher's
+     `LauncherInstalled.dat`; points at `Python3/Mac/`.
+   - ✅ First-run venv bootstrap verified working — `sb_setup.py` is platform-aware and
+     pip pulls macOS wheels for everything in `requirements.txt` (PySide6 6.5.3,
+     aioquic, etc.). Bootstrap installs into the engine's stock
+     `Extras/ThirdPartyNotUE/SwitchboardThirdParty/Python/` venv (matches Win/Linux).
+   - ✅ GUI launches on Mac, OSC server up on `127.0.0.1:6000`, plugins discovered,
+     config dialog round-trips correctly.
+   - ⏳ **End-to-end node test deferred** — needs a Win or Linux machine running
+     `SwitchboardListener` to point the GUI at. When such a node exists:
+     `Add Device ▾ → nDisplay → IP + listener port (default 2980) → Connect → Start Unreal`.
 4. **Scope 2 path:** depends on `tasks/macos-ndisplay-port.md` completing (Strategy A or B). Then start a separate plan for the listener port — it's a multi-day task and deserves its own `tasks/macos-switchboard-listener-port.md`.
 
 ## Useful commands
 
 - Bundled Mac Python: `"/Volumes/MNML_EXT/Epic Games/UE_5.7/Engine/Binaries/ThirdParty/Python3/Mac/bin/python3" --version`
 - Existing (Linux-hardcoded) launcher: `"/Volumes/MNML_EXT/Epic Games/UE_5.7/Engine/Plugins/VirtualProduction/Switchboard/Source/Switchboard/switchboard.sh"`
-- Switchboard config storage on disk: `~/Library/Application Support/Epic/Switchboard/` (Mac equivalent of `%APPDATA%/Epic/Switchboard/` on Win) — verify on first launch.
+- Switchboard config storage on disk: **engine plugin's `configs/` directory** —
+  `<UE_ROOT>/Engine/Plugins/VirtualProduction/Switchboard/Source/Switchboard/configs/<Name>.json`.
+  Not `~/Library/Application Support/Epic/Switchboard/` as previously speculated; Switchboard's
+  Python app uses an engine-plugin-relative path on every platform. Side effect: configs get
+  clobbered on engine reinstall. If you need persistence across reinstalls, either save the
+  config explicitly into the project tree (e.g. `Project/Config/Switchboard/`) and re-open it
+  on launch, or maintain a symlink from the engine path to a user-Library path.
 - nDisplay cluster config asset under this project: `Project/Content/DeepSpace/Switchboard/nDisplay_Deep_Space_8K.uasset` (this is the asset Switchboard *references* via the .uproject; it is **not** Switchboard itself).
 
 ## Open questions for the user (ask before deciding architecture)
