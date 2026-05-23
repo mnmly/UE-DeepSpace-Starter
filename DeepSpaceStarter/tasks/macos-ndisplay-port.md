@@ -189,6 +189,37 @@ for long-term clean integration. Talk to the user before committing to B.
    are currently untracked and uncommitted. Add a `.gitignore` rule before
    committing anything else if appropriate for the repo's conventions.
 
+## Slice 4 — Win/Linux verification (status: ✅ on Win, ⏳ on Linux)
+
+Verified 2026-05-23 on the user's Win render node (`mnml-win`, Tailscale
+100.120.177.122) running UE 5.7.4 (launcher install):
+
+- ✅ Cloned `feature/mac-ndisplay-stubs` (commit `1055049`).
+- ✅ Built `DeepSpaceStarterEditor Win64 Development` via Build.bat from
+  PowerShell — clean compile, AefPharus DLL produced. Stubs hidden from
+  UHT on Win because they live in `Public/Mac/` (UBT auto-skips
+  `Public/<Platform>/` for other platforms; commit `1055049` is the
+  fix for the original "Class shares engine name" UHT collision).
+- ✅ Editor opened, loaded `Deep_Space_8K.umap`, instantiated the
+  cluster actor as a real `ADisplayClusterRootActor`, started PIE.
+  Confirmed via log:
+  ```
+  LogDisplayClusterModule: StartSession with node ID 'Node_Wall'
+  LogDisplayClusterCluster: Node ID: Node_Wall
+  LogDisplayClusterCluster: New primary node (P-node): 'Node_Wall'
+  LogDisplayClusterCluster: Instantiating 'Editor' node controller...
+  ```
+- ⚠️ One cosmetic asset-registry warning: `bpx ref rewrite` shrank the
+  NameMap by ~23 bytes (longer tokens were swapped to shorter ones),
+  but the trailing AssetRegistry dependency-data block still encodes
+  pre-rewrite offsets. LinkerLoad uses different offset metadata and
+  works fine; only the editor's asset-registry pre-scan can't read
+  this asset's deps. Easiest fix: open the asset in the Win editor and
+  resave it (rebuilds the dep block from current state).
+
+⏳ Linux verification not done. Same approach should work — the
+Linux engine ini already has the CoreRedirects.
+
 ## First moves for the new session
 
 1. Read this file fully. Don't skim.
